@@ -4,6 +4,7 @@ use std::io::prelude::*;
 mod assembler;
 use assembler::Assembler;
 mod insts;
+mod tokenizer;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -20,7 +21,7 @@ fn main() {
     let mut assembler = Assembler::new();
     assembler.assemble(
         //        "/home/ttsurumi/workspace/famiasm/src/main.rs".to_string(),
-        "src/main.rs".to_string(),
+        "sample/sample.asm".to_string(),
         "out.bin".to_string(),
     );
 }

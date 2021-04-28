@@ -137,33 +137,6 @@ pub enum Addressing{
     IndirectX,
     IndirectY,
 }
-pub enum Token{
-    Op(Opcode),
-    Im8(u8),
-    Im8Adr(u8),
-    Im16(u16),
-    X,
-    Y,
-    A,
-    Comma,
-    LParen,
-    RParen,
-}
-
-impl FromStr for Token {
-    type Err = ();
-    fn from_str(s: &str) -> Result<Self, Self::Err>{
-        match s {
-            "X" | "x" => Ok(Token::X),
-            "Y" | "y" => Ok(Token::Y),
-            "(" => Ok(Token::LParen),
-            ")" => Ok(Token::RParen),
-            _ => Ok(Token::A), // <= temporary
-        }
-    }
-}
-
-
 
 pub struct Instruction {
     opcode: Opcode,
@@ -173,6 +146,7 @@ pub struct Instruction {
 impl From<String> for Instruction {
     fn from(s: String) -> Instruction {
         let line = s.trim();
+        println!("{:?}", line);
         let opcode : Opcode = Opcode::from_str(&line[0..3]).unwrap();
         match opcode {
             Opcode::BCC | Opcode::BCS |Opcode::BEQ |Opcode::BMI |Opcode::BNE |Opcode::BPL |Opcode::BVC |Opcode::BVS => {
@@ -180,7 +154,7 @@ impl From<String> for Instruction {
             }
             _ => {}
         }
-        let next = &line[4..].trim();
+        let _ = &line[4..].trim();
 
         // match next[0] {
         //     '('
@@ -527,8 +501,7 @@ impl Instruction {
             Opcode::TYA => match self.addressing {
                 Addressing::Implied => 0x98,
                 _ => panic!("invalid inst_code"),
-            },
-            _ => panic!("invalid inst_code")
+            }
         }
     }
 }

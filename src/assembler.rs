@@ -23,8 +23,9 @@ impl Assembler {
         for result in BufReader::new(infile).lines() {
             if let Ok(l) = result {
 //                println!("{:?}", l);
-                let mut tokenizer = Tokenizer::new(l.to_string());
-                Tokenizer::tokenize(l.to_string());
+                //let mut tokenizer = Tokenizer::new(l.to_string());
+                let tokens = Tokenizer::tokenize2(l.to_string());
+                println!("{:?}", tokens);
             }
 //            println!("{:?}", l);
 //            println!("end")

@@ -22,9 +22,9 @@ impl Assembler {
         //for line in reader.lines() {}
         for result in BufReader::new(infile).lines() {
             if let Ok(l) = result {
-                println!("{:?}", l);
+//                println!("{:?}", l);
                 let mut tokenizer = Tokenizer::new(l.to_string());
-                tokenizer.tokenize();
+                Tokenizer::tokenize(l.to_string());
             }
 //            println!("{:?}", l);
 //            println!("end")

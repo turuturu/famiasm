@@ -2,10 +2,6 @@ use std::fs;
 use std::io::{BufRead, BufReader};
 use crate::insts::{Opcode, Addressing, Instruction};
 use crate::tokenizer;
-// //use crate::insts;
-// use crate::insts::Opcode;
-// use crate::insts::Addressing;
-// use crate::insts::Instruction;
 
 pub struct Assembler {}
 impl Assembler {

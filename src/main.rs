@@ -5,6 +5,7 @@ mod assembler;
 use assembler::Assembler;
 mod insts;
 mod tokenizer;
+mod common;
 
 fn main() {
     let args: Vec<String> = env::args().collect();

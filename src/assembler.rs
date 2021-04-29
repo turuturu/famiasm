@@ -1,12 +1,12 @@
 use std::fs;
 use std::io::{BufRead, BufReader};
 use crate::insts::{Opcode, Addressing, Instruction};
-use crate::tokenizer::{Tokenizer};
-//use crate::insts;
-/*use crate::insts::Opcode;
-use crate::insts::Addressing;
-use crate::insts::Instruction;
-*/
+use crate::tokenizer;
+// //use crate::insts;
+// use crate::insts::Opcode;
+// use crate::insts::Addressing;
+// use crate::insts::Instruction;
+
 pub struct Assembler {}
 impl Assembler {
     pub fn new() -> Assembler {
@@ -24,7 +24,7 @@ impl Assembler {
             if let Ok(l) = result {
 //                println!("{:?}", l);
                 //let mut tokenizer = Tokenizer::new(l.to_string());
-                let tokens = Tokenizer::tokenize(l.to_string());
+                let tokens = tokenizer::tokenize(l.to_string());
                 println!("{:?}", tokens);
             }
 //            println!("{:?}", l);

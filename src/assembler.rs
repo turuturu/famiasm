@@ -24,7 +24,7 @@ impl Assembler {
             if let Ok(l) = result {
 //                println!("{:?}", l);
                 //let mut tokenizer = Tokenizer::new(l.to_string());
-                let tokens = Tokenizer::tokenize2(l.to_string());
+                let tokens = Tokenizer::tokenize(l.to_string());
                 println!("{:?}", tokens);
             }
 //            println!("{:?}", l);

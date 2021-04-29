@@ -126,7 +126,7 @@ impl Tokenizer {
         println!("{:?}", buf);
         panic!();
     }
-    pub fn tokenize2(line: impl Into<String>) -> Vec<Token>{
+    pub fn tokenize(line: impl Into<String>) -> Vec<Token>{
         let buf : &Vec<char> = &line.into().chars().collect();
         let mut pos = 0;
         let mut tokens : Vec<Token> = Vec::new();
@@ -295,109 +295,4 @@ impl Tokenizer {
         }
         tokens
     }
-
-    pub fn tokenize(line: impl Into<String>) {
-        let buf : &Vec<char> = &line.into().chars().collect();
-        let mut pos = 0;
-        while pos < buf.len(){
-            let (tokenstr, npos) = Tokenizer::next(buf, pos);
-            println!("{:?}", tokenstr);
-            pos = npos;
-        }
-
-        // println!("tokenize");
-        // let ch = self.current();
-        // if ch == None { 
-        //     println!("None");
-        //     self.tokens.push(
-        //         Token{
-        //             val: "".to_string(),
-        //             kind: TokenKind::EOL,
-        //         }
-        //     );
-        //     return;
-        // }
-        // let ch = ch.unwrap();
-        // if ch.is_ascii_alphabetic() || ch == '.' {
-        //     // label
-        //     self.label(false);
-        // }
-        // self.space();
-        // if self.is_alphabetic() {
-        //     self.opecode();
-        // }
-        // println!("{:?}", self.tokens);
-    }
-    // fn current(&self) -> Option<char>{
-    //     if self.buf.len() <= self.pos{
-    //         None
-    //     }else{
-    //         Some(self.buf[self.pos])
-    //     }  
-    // }
-    // fn opecode(&mut self) {
-    //     let head = self.pos;
-    //     while self.current().unwrap().is_ascii_alphabetic(){
-    //         self.next();
-    //     }
-    //     self.tokens.push(
-    //         Token{
-    //             val: self.buf[head..self.pos].iter().collect(),
-    //             kind: TokenKind::Op,
-    //         }
-    //     );
-    // }
-
-    // fn pad(&mut self) {
-    //     if self.is_space() {
-    //         self.space();
-    //         self.label(true);
-    //     }else{
-    //         self.label(false);
-    //     }
-    // }
-
-    // fn space(&mut self){
-    //     while self.pos < self.buf.len() && self.is_space() {
-    //         self.pos += 1;
-    //     }
-    // }
-    // fn label(&mut self, colon_required : bool){
-    //     if self.buf[self.pos] == '.'{
-    //         self.pos += 1;
-    //     }
-    //     let head = self.pos;
-    //     while self.pos < self.buf.len() && self.is_alphabetic() {
-    //         self.pos += 1;
-    //     }
-    //     let ch = self.current();
-    //     let mut tail = self.pos;
-    //     if colon_required {
-    //         if ch.unwrap() != ':' {
-    //             panic!("errrr");
-    //         }
-    //         self.next();
-    //         tail += 1;
-    //     }else{
-    //         if ch != None && ch.unwrap() == ':' {
-    //             self.next();
-    //             tail += 1;
-    //         }
-    //     }
-        
-    //     self.tokens.push(
-    //         Token{
-    //             val: self.buf[head..tail].iter().collect(),
-    //             kind: TokenKind::LABEL,
-    //         }
-    //     );
-    // }
-    // fn is_space(&self) -> bool{
-    //     let ch = self.buf[self.pos];
-    //     ch == ' ' || ch == '\t'
-    // }
-    // fn is_alphabetic(&self) -> bool{
-    //     let ch = self.buf[self.pos];
-    //     ch.is_ascii_alphabetic()
-    // }
 }

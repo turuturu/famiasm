@@ -1,6 +1,5 @@
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Loc(pub usize, pub usize);
-
 impl Loc {
     pub fn merge(&self, other: &Loc) {
         use std::cmp::{max, min};
@@ -14,7 +13,6 @@ pub struct Annot<T> {
     value: T,
     loc: Loc,
 }
-
 impl<T> Annot<T> {
     pub fn new(value: T, loc: Loc) -> Self {
         Self { value, loc }

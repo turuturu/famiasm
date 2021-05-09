@@ -19,8 +19,8 @@ impl LexError {
 #[derive(PartialOrd, PartialEq, Debug)]
 pub enum TokenKind {
     Opcode(Vec<char>),
-    Adr(Vec<char>),
-    Im(Vec<char>),
+    Adr(u8),
+    Im(u16),
     Label(Vec<char>),
     Comment(Vec<char>),
     Directive(Vec<char>),
@@ -32,17 +32,14 @@ pub enum TokenKind {
     LParen,
     RParen,
     Spaces,
+    Arrow,
 }
 
-// #[derive(Debug)]
-// pub struct Token{
-//     val: Vec<char>,
-//     kind: TokenKind,
-// }
-type Token = Annot<TokenKind>;
-
+pub type Token = Annot<TokenKind>;
 impl Token {
-    fn im(n: Vec<char>, loc: Loc) -> Self {
+    fn im(n: u16, loc: Loc) -> Self {
+        // todo
+        // intに変換する
         Self::new(TokenKind::Im(n), loc)
     }
     fn label(label: Vec<char>, loc: Loc) -> Self {
@@ -63,7 +60,7 @@ impl Token {
     fn string(string: Vec<char>, loc: Loc) -> Self {
         Self::new(TokenKind::String(string), loc)
     }
-    fn adr(adr: Vec<char>, loc: Loc) -> Self {
+    fn adr(adr: u8, loc: Loc) -> Self {
         Self::new(TokenKind::Adr(adr), loc)
     }
     fn x(loc: Loc) -> Self {
@@ -83,6 +80,9 @@ impl Token {
     }
     fn spaces(loc: Loc) -> Self {
         Self::new(TokenKind::Spaces, loc)
+    }
+    fn arrow(loc: Loc) -> Self {
+        Self::new(TokenKind::Arrow, loc)
     }
 }
 
@@ -110,12 +110,13 @@ pub fn tokenize(line: impl Into<String>) -> Vec<Token> {
         let mut cur = pos;
         let mut head_ch = buf[cur];
         // separator
-        if head_ch == '(' || head_ch == ')' || head_ch == ',' {
+        if head_ch == '(' || head_ch == ')' || head_ch == ',' || head_ch == '<' {
             tokens.push(
                 match head_ch {
                     ',' => Token::comma(Loc(pos, pos+1)),
                     '(' => Token::lparen(Loc(pos, pos+1)),
                     ')' => Token::rparen(Loc(pos, pos+1)),
+                    '<' => Token::arrow(Loc(pos, pos+1)),
                     _ => panic!(),
                 },
             );
@@ -192,50 +193,33 @@ pub fn tokenize(line: impl Into<String>) -> Vec<Token> {
             cur += 1;
             head_ch = buf[cur];
         }
-        if head_ch == '$' {
+        let mut start_pos = cur;
+        let radix = match head_ch {
+            '$' => {
+                start_pos += 1;
+                16
+            },
+            '%' => {
+                start_pos += 1;
+                2
+            },
+            '0'..='9' => 10,
+            _ => panic!(),
+        };
+        cur += 1;
+        while cur < buf.len() && buf[cur].is_digit(radix) {
             cur += 1;
-            while cur < buf.len() && buf[cur].is_digit(16) {
-                cur += 1;
-            }
-            tokens.push(
-                if buf[pos] == '#' {
-                    Token::adr(buf[pos..cur].to_vec(), Loc(pos, cur))
-                } else {
-                    Token::im(buf[pos..cur].to_vec(), Loc(pos, cur))
-                },
-            );
-            pos = cur + 1;
-            continue;
-            //assert!((cur - pos) == 3 || (cur - pos) == 5);
-        } else if head_ch == '%' {
-            cur += 1;
-            while cur < buf.len() && buf[cur].is_digit(2) {
-                cur += 1;
-            }
-            tokens.push(
-                if buf[pos] == '#' {
-                    Token::adr(buf[pos..cur].to_vec(), Loc(pos, cur))
-                } else {
-                    Token::im(buf[pos..cur].to_vec(), Loc(pos, cur))
-                },
-            );
-            pos = cur + 1;
-            continue;
-            //assert!(((cur - pos) == 5 || (cur - pos) == 9));
-        } else if head_ch.is_digit(10) {
-            while cur < buf.len() && buf[cur].is_digit(10) {
-                cur += 1;
-            }
-            tokens.push(
-                if buf[pos] == '#' {
-                    Token::adr(buf[pos..cur].to_vec(), Loc(pos, cur))
-                } else {
-                    Token::im(buf[pos..cur].to_vec(), Loc(pos, cur))
-                },
-            );
-            pos = cur + 1;
-            continue;
         }
+        let str : String = buf[start_pos..cur].into_iter().collect();
+        tokens.push(
+            if buf[pos] == '#' {
+                Token::adr(u8::from_str_radix(&str,radix).unwrap(), Loc(pos, cur))
+            } else {
+                Token::im(u16::from_str_radix(&str,radix).unwrap(), Loc(pos, cur))
+            },
+        );
+        pos = cur + 1;
+        continue;
         println!("{:?}", buf);
         panic!();
     }

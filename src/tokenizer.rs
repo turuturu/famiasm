@@ -1,5 +1,5 @@
 use crate::common::{Annot, Loc};
-
+use std::convert::TryFrom;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum LexErrorKind {
     InvalidChar(char),
@@ -19,8 +19,10 @@ impl LexError {
 #[derive(PartialOrd, PartialEq, Debug)]
 pub enum TokenKind {
     Opcode(Vec<char>),
-    Adr(u8),
-    Im(u16),
+    Adr8(u8),
+    Adr16(u16),
+    Im(u8),
+    LabelDef(Vec<char>),
     Label(Vec<char>),
     Comment(Vec<char>),
     Directive(Vec<char>),
@@ -37,13 +39,14 @@ pub enum TokenKind {
 
 pub type Token = Annot<TokenKind>;
 impl Token {
-    fn im(n: u16, loc: Loc) -> Self {
-        // todo
-        // intに変換する
+    fn im(n: u8, loc: Loc) -> Self {
         Self::new(TokenKind::Im(n), loc)
     }
     fn label(label: Vec<char>, loc: Loc) -> Self {
         Self::new(TokenKind::Label(label), loc)
+    }
+    fn labelDef(label: Vec<char>, loc: Loc) -> Self {
+        Self::new(TokenKind::LabelDef(label), loc)
     }
     fn opcode(opcode: Vec<char>, loc: Loc) -> Self {
         Self::new(TokenKind::Opcode(opcode), loc)
@@ -60,8 +63,11 @@ impl Token {
     fn string(string: Vec<char>, loc: Loc) -> Self {
         Self::new(TokenKind::String(string), loc)
     }
-    fn adr(adr: u8, loc: Loc) -> Self {
-        Self::new(TokenKind::Adr(adr), loc)
+    fn adr8(adr: u8, loc: Loc) -> Self {
+        Self::new(TokenKind::Adr8(adr), loc)
+    }
+    fn adr16(adr: u16, loc: Loc) -> Self {
+        Self::new(TokenKind::Adr16(adr), loc)
     }
     fn x(loc: Loc) -> Self {
         Self::new(TokenKind::X, loc)
@@ -110,22 +116,25 @@ pub fn tokenize(line: impl Into<String>) -> Vec<Token> {
         let mut cur = pos;
         let mut head_ch = buf[cur];
         // separator
-        if head_ch == '(' || head_ch == ')' || head_ch == ',' || head_ch == '<' {
-            tokens.push(
-                match head_ch {
-                    ',' => Token::comma(Loc(pos, pos+1)),
-                    '(' => Token::lparen(Loc(pos, pos+1)),
-                    ')' => Token::rparen(Loc(pos, pos+1)),
-                    '<' => Token::arrow(Loc(pos, pos+1)),
-                    _ => panic!(),
-                },
-            );
+        if head_ch == ',' {
+            // skip comma token
+            //tokens.push(Token::comma(Loc(pos, pos+1)));
+            pos = pos + 1;
+            continue;
+        }
+        if head_ch == '(' || head_ch == ')' || head_ch == '<' {
+            tokens.push(match head_ch {
+                '(' => Token::lparen(Loc(pos, pos + 1)),
+                ')' => Token::rparen(Loc(pos, pos + 1)),
+                '<' => Token::arrow(Loc(pos, pos + 1)),
+                _ => panic!(),
+            });
             pos = pos + 1;
             continue;
         }
         // comment
         if head_ch == ';' {
-            tokens.push(Token::comment(buf[pos..buf.len()].to_vec(), Loc(pos, buf.len())));
+            //tokens.push(Token::comment(buf[pos..buf.len()].to_vec(), Loc(pos, buf.len())));
             break;
         }
         // variables
@@ -136,8 +145,9 @@ pub fn tokenize(line: impl Into<String>) -> Vec<Token> {
             {
                 cur += 1;
             }
-            if is_head || buf[cur - 1] == ':' || has_op {
-                tokens.push(Token::label(buf[pos..cur].to_vec(), Loc(pos, cur)));
+            println!("{:?}, {:?}, {:?}, ", head_ch, cur, pos);
+            if is_head || buf[cur - 1] == ':' {
+                tokens.push(Token::labelDef(buf[pos..cur].to_vec(), Loc(pos, cur)));
             } else if cur - pos == 1
                 && (buf[cur - 1] == 'X'
                     || buf[cur - 1] == 'x'
@@ -146,14 +156,14 @@ pub fn tokenize(line: impl Into<String>) -> Vec<Token> {
                     || buf[cur - 1] == 'a'
                     || buf[cur - 1] == 'A')
             {
-                tokens.push(
-                    match buf[cur - 1] {
-                        'X' | 'x' => Token::x(Loc(pos, cur)),
-                        'Y' | 'y' => Token::y(Loc(pos, cur)),
-                        'A' | 'a' => Token::a(Loc(pos, cur)),
-                        _ => panic!(""),
-                    },
-                );
+                tokens.push(match buf[cur - 1] {
+                    'X' | 'x' => Token::x(Loc(pos, cur)),
+                    'Y' | 'y' => Token::y(Loc(pos, cur)),
+                    'A' | 'a' => Token::a(Loc(pos, cur)),
+                    _ => panic!(""),
+                });
+            } else if is_head || buf[cur - 1] == ':' || has_op {
+                tokens.push(Token::label(buf[pos..cur].to_vec(), Loc(pos, cur)));
             } else if buf[pos] == '.' {
                 tokens.push(Token::directive(buf[pos..cur].to_vec(), Loc(pos, cur)));
             } else {
@@ -168,7 +178,8 @@ pub fn tokenize(line: impl Into<String>) -> Vec<Token> {
             while cur < buf.len() && (buf[cur] == ' ' || buf[cur] == '\t') {
                 cur += 1;
             }
-            tokens.push(Token::spaces(Loc(pos, cur)));
+            // skip spaces token
+            // tokens.push(Token::spaces(Loc(pos, cur)));
             pos = cur;
             continue;
         }
@@ -197,27 +208,38 @@ pub fn tokenize(line: impl Into<String>) -> Vec<Token> {
         let radix = match head_ch {
             '$' => {
                 start_pos += 1;
+                cur += 1;
                 16
-            },
+            }
             '%' => {
                 start_pos += 1;
+                cur += 1;
                 2
-            },
+            }
             '0'..='9' => 10,
             _ => panic!(),
         };
-        cur += 1;
         while cur < buf.len() && buf[cur].is_digit(radix) {
             cur += 1;
         }
-        let str : String = buf[start_pos..cur].into_iter().collect();
-        tokens.push(
-            if buf[pos] == '#' {
-                Token::adr(u8::from_str_radix(&str,radix).unwrap(), Loc(pos, cur))
+        let str: String = buf[start_pos..cur].into_iter().collect();
+        tokens.push(if buf[pos] == '#' {
+            Token::im(u8::from_str_radix(&str, radix).unwrap(), Loc(pos, cur))
+        } else {
+            let val = u16::from_str_radix(&str, radix).unwrap();
+            // todo
+            // 多分下記条件曖昧
+            // u16で256未満の場合等
+            if (radix == 2 && cur - start_pos == 8)
+                || (radix == 16 && cur - start_pos == 2)
+                || (radix == 10 && val <= 256)
+            {
+                Token::adr8(u8::from_str_radix(&str, radix).unwrap(), Loc(pos, cur))
             } else {
-                Token::im(u16::from_str_radix(&str,radix).unwrap(), Loc(pos, cur))
-            },
-        );
+                Token::adr16(val, Loc(pos, cur))
+            }
+            //Token::adr(u8::from_str_radix(&str,radix).unwrap(), Loc(pos, cur))
+        });
         pos = cur + 1;
         continue;
         println!("{:?}", buf);

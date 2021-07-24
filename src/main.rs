@@ -6,6 +6,8 @@ use assembler::Assembler;
 mod insts;
 mod tokenizer;
 mod common;
+mod parser;
+mod symbol_table;
 
 fn main() {
     let args: Vec<String> = env::args().collect();

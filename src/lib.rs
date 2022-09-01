@@ -1,7 +1,9 @@
 extern crate regex;
 pub mod assembler;
-mod insts;
-mod tokenizer;
-mod parser;
 mod common;
+mod directive;
+mod insts;
+mod nes_header;
+mod parser;
 mod symbol_table;
+mod tokenizer;

@@ -21,6 +21,8 @@ pub enum TokenKind {
     Opcode(Vec<char>),
     Adr8(u8),
     Adr16(u16),
+    U8(u8),
+    U16(u16),
     Im(u8),
     LabelDef(Vec<char>),
     Label(Vec<char>),
@@ -68,6 +70,12 @@ impl Token {
     }
     fn adr16(adr: u16, loc: Loc) -> Self {
         Self::new(TokenKind::Adr16(adr), loc)
+    }
+    fn u8(adr: u8, loc: Loc) -> Self {
+        Self::new(TokenKind::U8(adr), loc)
+    }
+    fn u16(adr: u16, loc: Loc) -> Self {
+        Self::new(TokenKind::U16(adr), loc)
     }
     fn x(loc: Loc) -> Self {
         Self::new(TokenKind::X, loc)
@@ -165,6 +173,7 @@ pub fn tokenize(line: impl Into<String>) -> Vec<Token> {
             } else if is_head || buf[cur - 1] == ':' || has_op {
                 tokens.push(Token::label(buf[pos..cur].to_vec(), Loc(pos, cur)));
             } else if buf[pos] == '.' {
+                has_op = true;
                 tokens.push(Token::directive(buf[pos..cur].to_vec(), Loc(pos, cur)));
             } else {
                 has_op = true;
@@ -234,9 +243,17 @@ pub fn tokenize(line: impl Into<String>) -> Vec<Token> {
                 || (radix == 16 && cur - start_pos == 2)
                 || (radix == 10 && val <= 256)
             {
-                Token::adr8(u8::from_str_radix(&str, radix).unwrap(), Loc(pos, cur))
+                if let TokenKind::Directive(_) = &tokens.last().unwrap().value {
+                    Token::u8(u8::from_str_radix(&str, radix).unwrap(), Loc(pos, cur))
+                } else {
+                    Token::adr8(u8::from_str_radix(&str, radix).unwrap(), Loc(pos, cur))
+                }
             } else {
-                Token::adr16(val, Loc(pos, cur))
+                if let TokenKind::Directive(_) = &tokens.last().unwrap().value {
+                    Token::u16(val, Loc(pos, cur))
+                } else {
+                    Token::adr16(val, Loc(pos, cur))
+                }
             }
             //Token::adr(u8::from_str_radix(&str,radix).unwrap(), Loc(pos, cur))
         });

@@ -3,11 +3,13 @@ use std::fs::File;
 use std::io::prelude::*;
 mod assembler;
 use assembler::Assembler;
-mod insts;
-mod tokenizer;
 mod common;
+mod directive;
+mod insts;
+mod nes_header;
 mod parser;
 mod symbol_table;
+mod tokenizer;
 
 fn main() {
     let args: Vec<String> = env::args().collect();

@@ -1,0 +1,6 @@
+; sample1.asm
+string                           = $E071
+palettes                         = $E061
+copypal                          = $E02A
+copymap                          = $E042
+mainloop                         = $E05E

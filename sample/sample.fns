@@ -1,0 +1,3 @@
+; sample.asm
+infinityLoop                     = $E027
+loadPal                          = $E000

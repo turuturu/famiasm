@@ -7,7 +7,6 @@ impl Loc {
     }
 }
 
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Annot<T> {
     pub value: T,

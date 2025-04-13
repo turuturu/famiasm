@@ -31,5 +31,7 @@ impl Assembler {
         }
         let mut parser = Parser::new();
         parser.parse(v);
+        let bin = parser.gen_binary();
+        // println!("{:?}", bin);
     }
 }

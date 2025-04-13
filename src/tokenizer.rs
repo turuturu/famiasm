@@ -239,6 +239,7 @@ pub fn tokenize(line: impl Into<String>) -> Vec<Token> {
             // todo
             // 多分下記条件曖昧
             // u16で256未満の場合等
+            // ディレクティブの種類で判別
             if (radix == 2 && cur - start_pos == 8)
                 || (radix == 16 && cur - start_pos == 2)
                 || (radix == 10 && val <= 256)

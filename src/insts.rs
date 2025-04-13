@@ -172,9 +172,22 @@ pub enum Addressing {
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum AbstructInstruction {
     Instruction(Instruction),
-    Bin(Vec<u8>),
+    Bin(Bin),
 }
 
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+pub struct Bin {
+    pub dat: Vec<u8>,
+    pub address: RamAddress,
+}
+impl Bin {
+    pub fn new(dat: Vec<u8>, address: RamAddress) -> Bin {
+        Bin {
+            dat: dat,
+            address: address,
+        }
+    }
+}
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Instruction {
     pub opcode: Opcode,
@@ -217,7 +230,7 @@ impl Instruction {
         match info.num_bytes {
             1 => return v,
             2 => {
-                let operand: u8 = TryFrom::try_from(address).unwrap();
+                let operand: u8 = TryFrom::try_from(address % 256).unwrap();
                 v.push(operand);
                 return v;
             }

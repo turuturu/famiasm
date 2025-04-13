@@ -1,11 +1,12 @@
 use crate::common::{Annot, Loc};
 use crate::directive::Directive;
 use crate::insts::{
-    AbstructAddress, AbstructInstruction, Addressing, Instruction, Opcode, Operand, RamAddress,
+    AbstructAddress, AbstructInstruction, Addressing, Bin, Instruction, Opcode, Operand, RamAddress,
 };
 use crate::nes_header::NesHeader;
 use crate::symbol_table::SymbolTable;
 use crate::tokenizer::{Token, TokenKind};
+use std::convert::TryInto;
 use std::mem;
 use std::str::FromStr;
 
@@ -91,16 +92,70 @@ impl Parser {
         }
     }
 
+    pub fn gen_binary(&self) -> Vec<u8> {
+        let mut nes_header: Vec<u8> = self.meta_info.gen_binary().to_vec();
+        let num_prg_rom = self.meta_info.prg_rom_count as usize;
+        let num_chr_rom = self.meta_info.chr_rom_count as usize;
+        let mut prg_roms: Vec<Vec<u8>> = vec![vec![0; 16 * 1024]; num_prg_rom];
+        let mut chr_roms: Vec<Vec<u8>> = vec![vec![0; 8 * 1024]; num_chr_rom];
+        println!("start ---------------------");
+        println!("nes_header = {:?}", nes_header);
+        println!("num_prg_rom = {:?}", num_prg_rom);
+        println!("num_chr_rom = {:?}", num_chr_rom);
+        for inst in &self.insts {
+            let target_bank = match inst {
+                AbstructInstruction::Instruction(inst) => inst.address.bank,
+                AbstructInstruction::Bin(bin) => bin.address.bank,
+            } as usize;
+            let target_address = match inst {
+                AbstructInstruction::Instruction(inst) => inst.address.address,
+                AbstructInstruction::Bin(bin) => bin.address.address,
+            };
+            let target_index = if target_address < 0x2000 {
+                target_address as usize
+            } else if 0xC000 <= target_address {
+                target_address as usize - 0xC000
+            } else if 0x8000 <= target_address {
+                target_address as usize - 0x8000
+            } else {
+                panic!();
+            } as usize;
+            let target_rom = if num_prg_rom <= target_bank as usize {
+                &mut chr_roms[target_bank - num_prg_rom]
+            } else if 0xC000 <= target_address {
+                &mut prg_roms[num_prg_rom - 1]
+            } else {
+                &mut prg_roms[target_bank]
+            };
+            println!("{:?}", inst);
+            match inst {
+                AbstructInstruction::Instruction(inst) => {
+                    let inst_code = inst.get_inst_code();
+                    target_rom[target_index..target_index + inst_code.len()]
+                        .copy_from_slice(&inst_code);
+                }
+                AbstructInstruction::Bin(bin) => {
+                    let len = bin.dat.len();
+                    target_rom[target_index..target_index + len].copy_from_slice(&bin.dat);
+                }
+            }
+        }
+        // concatenate
+        nes_header.extend(prg_roms.into_iter().flatten());
+        nes_header.extend(chr_roms.into_iter().flatten());
+        return nes_header;
+    }
+
     pub fn parse(&mut self, token_lines: Vec<Vec<Token>>) {
         println!("parse");
-        let mut current_bank = 0;
+        // let mut current_bank = 0;
         // todo .org処理
-        let mut current_address = 0;
+        // let mut current_address = 0;
         for tokens in token_lines {
             println!("{:?}", &tokens);
             let address = RamAddress {
-                bank: current_bank,
-                address: current_address,
+                bank: self.current_address.bank,
+                address: self.current_address.address,
             };
             let tokens: Vec<Token> = tokens
                 .into_iter()
@@ -130,7 +185,6 @@ impl Parser {
                 TokenKind::Directive(directive) => {
                     let d = Directive::from_str(&(directive.iter().collect::<String>())).unwrap();
                     current_pos += 1;
-                    println!("get_operand({:?})", &tokens);
                     let val = self.get_operand(&tokens, current_pos).unwrap();
                     match d {
                         Directive::ORG => {
@@ -188,8 +242,16 @@ impl Parser {
                         Directive::DB | Directive::BYTE => {
                             println!("directive({:?})", d);
                             if let Operand::U8(val) = val {
-                                self.insts.push(AbstructInstruction::Bin(vec![val]));
-                                current_address += 1;
+                                // let bin = Bin::new(vec![val], self.current_address.clone());
+                                let bin = Bin::new(
+                                    vec![val],
+                                    RamAddress {
+                                        bank: self.current_address.bank,
+                                        address: self.current_address.address,
+                                    },
+                                );
+                                self.insts.push(AbstructInstruction::Bin(bin));
+                                self.current_address.address += 1;
                                 continue;
                             } else {
                                 panic!();
@@ -200,19 +262,30 @@ impl Parser {
                             match val {
                                 Operand::U16(val) => {
                                     let val = val.to_le_bytes();
-                                    self.insts.push(AbstructInstruction::Bin(
+                                    let bin = Bin::new(
                                         val.iter().cloned().collect(),
-                                    ));
-                                    current_address += 2;
+                                        RamAddress {
+                                            bank: self.current_address.bank,
+                                            address: self.current_address.address,
+                                        },
+                                    );
+
+                                    self.insts.push(AbstructInstruction::Bin(bin));
+                                    self.current_address.address += 2;
                                     continue;
                                 }
                                 Operand::U8(val) => {
                                     let val: u16 = From::from(val);
                                     let val = val.to_le_bytes();
-                                    self.insts.push(AbstructInstruction::Bin(
+                                    let bin = Bin::new(
                                         val.iter().cloned().collect(),
-                                    ));
-                                    current_address += 2;
+                                        RamAddress {
+                                            bank: self.current_address.bank,
+                                            address: self.current_address.address,
+                                        },
+                                    );
+                                    self.insts.push(AbstructInstruction::Bin(bin));
+                                    self.current_address.address += 2;
                                     continue;
                                 }
                                 Operand::Address(adr) => {
@@ -227,7 +300,7 @@ impl Parser {
                         Directive::INCBIN => {
                             println!("directive({:?})", d);
                             let val = self.get_operand(&tokens, current_pos);
-                            current_address += 0; // todo ファイルサイズ分だけincrement
+                            self.current_address.address += 0; // todo ファイルサイズ分だけincrement
                             println!("val({:?})", val);
                         }
                         _ => {
@@ -254,7 +327,8 @@ impl Parser {
                         let inst_info = inst.get_op_info();
                         println!("{:?}", inst.get_op_info());
                         self.insts.push(AbstructInstruction::Instruction(inst));
-                        current_address = current_address + (inst_info.num_bytes as u16);
+                        self.current_address.address =
+                            self.current_address.address + (inst_info.num_bytes as u16);
                         continue;
                     }
                     current_pos += 1;
@@ -277,19 +351,22 @@ impl Parser {
                                 address,
                             );
                             let inst_info = inst.get_op_info();
-                            current_address = current_address + (inst_info.num_bytes as u16);
+                            self.current_address.address =
+                                self.current_address.address + (inst_info.num_bytes as u16);
                             println!("{:?}", next);
                             self.insts.push(AbstructInstruction::Instruction(inst));
                             continue;
                         }
                         _ => (),
                     }
+                    println!("next = {:?}", next);
                     match next {
                         // Accumulator op
                         TokenKind::A => {
                             let inst = Instruction::new(op, Addressing::Accumulator, None, address);
                             let inst_info = inst.get_op_info();
-                            current_address = current_address + (inst_info.num_bytes as u16);
+                            self.current_address.address =
+                                self.current_address.address + (inst_info.num_bytes as u16);
                             println!("{:?}", inst.get_op_info());
                             println!("{:?}", inst.get_inst_code());
                             self.insts.push(AbstructInstruction::Instruction(inst));
@@ -305,17 +382,18 @@ impl Parser {
                                 address,
                             );
                             let inst_info = inst.get_op_info();
-                            current_address = current_address + (inst_info.num_bytes as u16);
+                            self.current_address.address =
+                                self.current_address.address + (inst_info.num_bytes as u16);
                             println!("{:?}", inst.get_op_info());
                             println!("{:?}", inst.get_inst_code());
                             self.insts.push(AbstructInstruction::Instruction(inst));
                             continue;
                         }
                         // Absolute|Zeropage op
-                        TokenKind::U8(_) | TokenKind::U16(_) | TokenKind::Label(_) => {
+                        TokenKind::Adr8(_) | TokenKind::Adr16(_) | TokenKind::Label(_) => {
                             let operand = self.get_operand(&tokens, current_pos);
                             let addressing = match next {
-                                TokenKind::U8(_) => {
+                                TokenKind::Adr8(_) => {
                                     if token_length == 2 {
                                         Addressing::Zeropage
                                     } else {
@@ -328,7 +406,7 @@ impl Parser {
                                         }
                                     }
                                 }
-                                TokenKind::U16(_) | TokenKind::Label(_) => {
+                                TokenKind::Adr16(_) | TokenKind::Label(_) => {
                                     if token_length == 2 {
                                         Addressing::Absolute
                                     } else {
@@ -347,7 +425,8 @@ impl Parser {
                             let inst = Instruction::new(op, addressing, operand, address);
                             let inst_info = inst.get_op_info();
                             self.insts.push(AbstructInstruction::Instruction(inst));
-                            current_address = current_address + (inst_info.num_bytes as u16);
+                            self.current_address.address =
+                                self.current_address.address + (inst_info.num_bytes as u16);
                         }
                         // Indirect op
                         TokenKind::LParen => {
@@ -358,7 +437,7 @@ impl Parser {
                             let operand = self.get_operand(&tokens, current_pos);
                             let next = &tokens[current_pos].value;
                             let addressing = match next {
-                                TokenKind::U8(_) => {
+                                TokenKind::Adr8(_) => {
                                     current_pos += 1;
                                     let next = &tokens[current_pos].value;
                                     match next {
@@ -383,7 +462,7 @@ impl Parser {
                                         _ => panic!(),
                                     }
                                 }
-                                TokenKind::U16(_) | TokenKind::Label(_) => {
+                                TokenKind::Adr16(_) | TokenKind::Label(_) => {
                                     current_pos += 1;
                                     let next = &tokens[current_pos].value;
                                     if let TokenKind::RParen = next {
@@ -397,7 +476,8 @@ impl Parser {
                             let inst = Instruction::new(op, addressing, operand, address);
                             let inst_info = inst.get_op_info();
                             self.insts.push(AbstructInstruction::Instruction(inst));
-                            current_address = current_address + (inst_info.num_bytes as u16);
+                            self.current_address.address =
+                                self.current_address.address + (inst_info.num_bytes as u16);
                         }
                         _ => (),
                     }

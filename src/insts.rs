@@ -173,8 +173,21 @@ pub enum Addressing {
 pub enum AbstructInstruction {
     Instruction(Instruction),
     Bin(Bin),
+    Label(Label),
 }
-
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+pub struct Label {
+    pub label: AbstructAddress,
+    pub address: RamAddress,
+}
+impl Label {
+    pub fn new(label: AbstructAddress, address: RamAddress) -> Label {
+        Label {
+            label: label,
+            address: address,
+        }
+    }
+}
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Bin {
     pub dat: Vec<u8>,
@@ -212,7 +225,7 @@ impl Instruction {
     }
     pub fn get_inst_code(&self) -> Vec<u8> {
         if let None = self.operand {
-            return vec![];
+            return vec![self.get_op_info().opcode];
         }
         let address = match self.operand.as_ref().unwrap() {
             Operand::Address(address) => {

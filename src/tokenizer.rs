@@ -203,7 +203,7 @@ pub fn tokenize(line: impl Into<String>) -> Vec<Token> {
             } else {
                 panic!("\" not found");
             }
-            tokens.push(Token::string(buf[pos..cur].to_vec(), Loc(pos, cur)));
+            tokens.push(Token::string(buf[pos + 1..cur - 1].to_vec(), Loc(pos, cur)));
             pos = cur;
             continue;
         }

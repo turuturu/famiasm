@@ -1,14 +1,15 @@
 use crate::common::{Annot, Loc};
 use crate::directive::Directive;
 use crate::insts::{
-    AbstructAddress, AbstructInstruction, Addressing, Bin, Instruction, Opcode, Operand, RamAddress,
+    AbstructAddress, AbstructInstruction, Addressing, Bin, Instruction, Label, Opcode, Operand,
+    RamAddress,
 };
 use crate::nes_header::NesHeader;
 use crate::symbol_table::SymbolTable;
 use crate::tokenizer::{Token, TokenKind};
 use std::convert::TryInto;
-use std::mem;
 use std::str::FromStr;
+use std::{fs, mem};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Parser {
@@ -79,14 +80,34 @@ impl Parser {
         return None;
     }
     pub fn resolve_address(&mut self) {
-        for inst in &mut self.insts {
+        for mut inst in &mut self.insts {
             if let AbstructInstruction::Instruction(inst) = inst {
                 if let Some(Operand::Address(AbstructAddress::Label(label))) = &inst.operand {
-                    println!("{:?}", label);
-                    let adr = self.symtab.get(label);
-                    inst.operand = Some(Operand::Address(AbstructAddress::RamAddress(
-                        adr.unwrap().clone(),
-                    )));
+                    if inst.addressing == Addressing::Relative {
+                        // Relative Addressing
+                        let op_info = inst.get_op_info();
+                        let mut adr = self.symtab.get(label).unwrap().clone();
+                        let rel_address: i16 = adr.address as i16
+                            - inst.address.address as i16
+                            - op_info.num_bytes as i16;
+                        adr.address = rel_address as u16;
+                        inst.operand = Some(Operand::Address(AbstructAddress::RamAddress(adr)));
+                    } else {
+                        println!("{:?}", label);
+                        let adr = self.symtab.get(label);
+                        inst.operand = Some(Operand::Address(AbstructAddress::RamAddress(
+                            adr.unwrap().clone(),
+                        )));
+                        // Absolute Addressing
+                    }
+                }
+            } else if let AbstructInstruction::Label(labelobj) = inst {
+                if let AbstructAddress::Label(label) = &labelobj.label {
+                    println!("yyyyyyyyyyyyy {:?}", label);
+                    let adr = self.symtab.get(label).unwrap().clone();
+                    let bin =
+                        Bin::new(adr.address.to_le_bytes().to_vec(), labelobj.address.clone());
+                    *inst = AbstructInstruction::Bin(bin);
                 }
             }
         }
@@ -96,7 +117,7 @@ impl Parser {
         let mut nes_header: Vec<u8> = self.meta_info.gen_binary().to_vec();
         let num_prg_rom = self.meta_info.prg_rom_count as usize;
         let num_chr_rom = self.meta_info.chr_rom_count as usize;
-        let mut prg_roms: Vec<Vec<u8>> = vec![vec![0; 16 * 1024]; num_prg_rom];
+        let mut prg_roms: Vec<Vec<u8>> = vec![vec![0xFF; 16 * 1024]; num_prg_rom];
         let mut chr_roms: Vec<Vec<u8>> = vec![vec![0; 8 * 1024]; num_chr_rom];
         println!("start ---------------------");
         println!("nes_header = {:?}", nes_header);
@@ -104,12 +125,26 @@ impl Parser {
         println!("num_chr_rom = {:?}", num_chr_rom);
         for inst in &self.insts {
             let target_bank = match inst {
-                AbstructInstruction::Instruction(inst) => inst.address.bank,
-                AbstructInstruction::Bin(bin) => bin.address.bank,
+                AbstructInstruction::Instruction(inst) => {
+                    if num_prg_rom == 1 && inst.address.bank != 0 {
+                        inst.address.bank - 1
+                    } else {
+                        inst.address.bank
+                    }
+                }
+                AbstructInstruction::Bin(bin) => {
+                    if num_prg_rom == 1 && bin.address.bank != 0 {
+                        bin.address.bank - 1
+                    } else {
+                        bin.address.bank
+                    }
+                }
+                _ => panic!(),
             } as usize;
             let target_address = match inst {
                 AbstructInstruction::Instruction(inst) => inst.address.address,
                 AbstructInstruction::Bin(bin) => bin.address.address,
+                _ => panic!(),
             };
             let target_index = if target_address < 0x2000 {
                 target_address as usize
@@ -127,7 +162,10 @@ impl Parser {
             } else {
                 &mut prg_roms[target_bank]
             };
-            println!("{:?}", inst);
+            // println!("{:?}", inst);
+            // println!("target_bank {:?}", target_bank);
+            // println!("target_address {:?}", target_address);
+            // println!("target_index {:?}", target_index);
             match inst {
                 AbstructInstruction::Instruction(inst) => {
                     let inst_code = inst.get_inst_code();
@@ -138,6 +176,7 @@ impl Parser {
                     let len = bin.dat.len();
                     target_rom[target_index..target_index + len].copy_from_slice(&bin.dat);
                 }
+                _ => panic!(),
             }
         }
         // concatenate
@@ -271,7 +310,8 @@ impl Parser {
                                     );
 
                                     self.insts.push(AbstructInstruction::Bin(bin));
-                                    self.current_address.address += 2;
+                                    self.current_address.address =
+                                        self.current_address.address.wrapping_add(2);
                                     continue;
                                 }
                                 Operand::U8(val) => {
@@ -285,10 +325,22 @@ impl Parser {
                                         },
                                     );
                                     self.insts.push(AbstructInstruction::Bin(bin));
-                                    self.current_address.address += 2;
+                                    self.current_address.address =
+                                        self.current_address.address.wrapping_add(2);
                                     continue;
                                 }
                                 Operand::Address(adr) => {
+                                    println!("zzzzzzzz adr = {:?}", adr);
+                                    let label = Label::new(
+                                        adr,
+                                        RamAddress {
+                                            bank: self.current_address.bank,
+                                            address: self.current_address.address,
+                                        },
+                                    );
+                                    self.insts.push(AbstructInstruction::Label(label));
+                                    self.current_address.address =
+                                        self.current_address.address.wrapping_add(2);
                                     continue;
                                 }
                                 _ => {
@@ -300,8 +352,24 @@ impl Parser {
                         Directive::INCBIN => {
                             println!("directive({:?})", d);
                             let val = self.get_operand(&tokens, current_pos);
-                            self.current_address.address += 0; // todo ファイルサイズ分だけincrement
-                            println!("val({:?})", val);
+                            if let Some(Operand::String(filename)) = val {
+                                println!("filename({:?})", filename);
+                                let filename_str: String = filename.iter().collect();
+                                let data: Vec<u8> = fs::read(filename_str).unwrap();
+                                let file_size = data.len() as u16;
+                                let bin = Bin::new(
+                                    data,
+                                    RamAddress {
+                                        bank: self.current_address.bank,
+                                        address: self.current_address.address,
+                                    },
+                                );
+                                self.insts.push(AbstructInstruction::Bin(bin));
+                                self.current_address.address += file_size;
+                            } else {
+                                panic!();
+                            }
+                            continue;
                         }
                         _ => {
                             println!("unsupported directive {:?}", d);
@@ -325,7 +393,8 @@ impl Parser {
                     if token_length == 1 {
                         let inst = Instruction::new(op, Addressing::Implied, None, address);
                         let inst_info = inst.get_op_info();
-                        println!("{:?}", inst.get_op_info());
+                        println!("ooooppppinfo {:?}", inst.get_op_info());
+                        println!("inst {:?}", inst);
                         self.insts.push(AbstructInstruction::Instruction(inst));
                         self.current_address.address =
                             self.current_address.address + (inst_info.num_bytes as u16);
@@ -491,14 +560,14 @@ impl Parser {
         }
         println!("xxxxxxxxxxxxxxxxxxxxxxxxxx");
         println!("{:?}", &self.symtab);
-        println!("xxxxxxxxxxxxxxxxxxxxxxxxxx");
-        for inst in &self.insts {
-            println!("{:?}", inst);
-        }
+        // println!("xxxxxxxxxxxxxxxxxxxxxxxxxx");
+        // for inst in &self.insts {
+        //     println!("{:?}", inst);
+        // }
         self.resolve_address();
-        println!("xxxxxxxxxxxxxxxxxxxxxxxxxx");
-        for inst in &self.insts {
-            println!("{:?}", inst);
-        }
+        // println!("xxxxxxxxxxxxxxxxxxxxxxxxxx");
+        // for inst in &self.insts {
+        //     println!("{:?}", inst);
+        // }
     }
 }

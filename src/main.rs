@@ -27,6 +27,6 @@ fn main() {
     assembler.assemble(
         //        "/home/ttsurumi/workspace/famiasm/src/main.rs".to_string(),
         "sample/giko005.asm".to_string(),
-        "out.bin".to_string(),
+        "out.nes".to_string(),
     );
 }

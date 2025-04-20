@@ -37,7 +37,7 @@ impl NesHeader {
         arr[0] = 0x4E; // N
         arr[1] = 0x45; // E
         arr[2] = 0x53; // S
-        arr[3] = 0xaA; //
+        arr[3] = 0x1A; //
         arr[4] = self.prg_rom_count;
         arr[5] = self.chr_rom_count;
         /*

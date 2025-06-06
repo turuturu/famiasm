@@ -16,15 +16,12 @@ fn main() {
         return;
     }
     println!("{:?}", args);
-    let _filename = &args[1];
-    //let mut f = File::open(filename).expect("xxxx");
-    //let mut contents = String::new();
-    //f.read_to_string(&mut contents).expect("xx");
-    //println!("{}", contents);
+    let filename = &args[1];
+    let output_filename = filename.replace(".asm", ".nes");
+    
     let mut assembler = Assembler::new();
     assembler.assemble(
-        //        "/home/ttsurumi/workspace/famiasm/src/main.rs".to_string(),
-        "sample/giko005.asm".to_string(),
-        "out.nes".to_string(),
+        filename.to_string(),
+        output_filename,
     );
 }

@@ -10,3 +10,16 @@ edition = "2018"
 regex = "1.4.x"
 strum = "0.20"
 strum_macros = "0.20"
+log = "0.4"
+
+[[test]]
+name = "compare_output"
+path = "tests/compare_output.rs"
+
+[[test]]
+name = "integration_test"
+path = "tests/integration_test.rs"
+
+[[test]]
+name = "incbin_test"
+path = "tests/incbin_test.rs"

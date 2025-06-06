@@ -1,5 +1,6 @@
 use crate::parser::Parser;
 use crate::tokenizer;
+use log::debug;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
@@ -24,7 +25,7 @@ impl Assembler {
                 //                println!("{:?}", l);
                 //let mut tokenizer = Tokenizer::new(l.to_string());
                 let tokens = tokenizer::tokenize(l.to_string());
-                println!("{:?}", &tokens);
+                debug!("{:?}", &tokens);
                 v.push(tokens);
             }
             //            println!("{:?}", l);

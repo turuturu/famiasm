@@ -7,6 +7,7 @@ use crate::insts::{
 use crate::nes_header::NesHeader;
 use crate::symbol_table::SymbolTable;
 use crate::tokenizer::{Token, TokenKind};
+use log::debug;
 use std::str::FromStr;
 use std::{fs, mem};
 use std::path::{Path, PathBuf};
@@ -105,7 +106,7 @@ impl Parser {
                         adr.address = rel_address as u16;
                         inst.operand = Some(Operand::Address(AbstructAddress::RamAddress(adr)));
                     } else {
-                        println!("{:?}", label);
+                        debug!("{:?}", label);
                         let adr = self.symtab.get(label);
                         inst.operand = Some(Operand::Address(AbstructAddress::RamAddress(
                             adr.unwrap().clone(),
@@ -115,7 +116,7 @@ impl Parser {
                 }
             } else if let AbstructInstruction::Label(labelobj) = inst {
                 if let AbstructAddress::Label(label) = &labelobj.label {
-                    println!("yyyyyyyyyyyyy {:?}", label);
+                    debug!("yyyyyyyyyyyyy {:?}", label);
                     let adr = self.symtab.get(label).unwrap().clone();
                     let bin =
                         Bin::new(adr.address.to_le_bytes().to_vec(), labelobj.address.clone());
@@ -131,10 +132,10 @@ impl Parser {
         let num_chr_rom = self.meta_info.chr_rom_count as usize;
         let mut prg_roms: Vec<Vec<u8>> = vec![vec![0xFF; 16 * 1024]; num_prg_rom];
         let mut chr_roms: Vec<Vec<u8>> = vec![vec![0; 8 * 1024]; num_chr_rom];
-        println!("start ---------------------");
-        println!("nes_header = {:?}", nes_header);
-        println!("num_prg_rom = {:?}", num_prg_rom);
-        println!("num_chr_rom = {:?}", num_chr_rom);
+        debug!("start ---------------------");
+        debug!("nes_header = {:?}", nes_header);
+        debug!("num_prg_rom = {:?}", num_prg_rom);
+        debug!("num_chr_rom = {:?}", num_chr_rom);
         for inst in &self.insts {
             let target_bank = match inst {
                 AbstructInstruction::Instruction(inst) => {
@@ -174,10 +175,10 @@ impl Parser {
             } else {
                 &mut prg_roms[target_bank]
             };
-            // println!("{:?}", inst);
-            // println!("target_bank {:?}", target_bank);
-            // println!("target_address {:?}", target_address);
-            // println!("target_index {:?}", target_index);
+            // debug!("{:?}", inst);
+            // debug!("target_bank {:?}", target_bank);
+            // debug!("target_address {:?}", target_address);
+            // debug!("target_index {:?}", target_index);
             match inst {
                 AbstructInstruction::Instruction(inst) => {
                     let inst_code = inst.get_inst_code();
@@ -198,12 +199,12 @@ impl Parser {
     }
 
     pub fn parse(&mut self, token_lines: Vec<Vec<Token>>) {
-        println!("parse");
+        debug!("parse");
         // let mut current_bank = 0;
         // todo .org処理
         // let mut current_address = 0;
         for tokens in token_lines {
-            println!("{:?}", &tokens);
+            debug!("{:?}", &tokens);
             let address = RamAddress {
                 bank: self.current_address.bank,
                 address: self.current_address.address,
@@ -222,7 +223,7 @@ impl Parser {
             let mut current_pos = 0;
             if let TokenKind::LabelDef(label) = &tokens[current_pos].value {
                 // tood 同一行のop処理
-                println!("labelDef({:?})", label);
+                debug!("labelDef({:?})", label);
                 let label = &label[..label.len() - 1];
                 self.symtab
                     .insert(label.iter().collect::<String>(), address.clone());
@@ -255,7 +256,7 @@ impl Parser {
                             }
                         }
                         Directive::INESCHR => {
-                            println!("directive({:?})", d);
+                            debug!("directive({:?})", d);
                             if let Operand::U8(val) = val {
                                 self.meta_info.chr_rom_count = val;
                                 continue;
@@ -264,7 +265,7 @@ impl Parser {
                             }
                         }
                         Directive::INESMIR => {
-                            println!("directive({:?})", d);
+                            debug!("directive({:?})", d);
                             if let Operand::U8(val) = val {
                                 self.meta_info.mirror = val;
                                 continue;
@@ -273,7 +274,7 @@ impl Parser {
                             }
                         }
                         Directive::INESMAP => {
-                            println!("directive({:?})", d);
+                            debug!("directive({:?})", d);
                             if let Operand::U8(val) = val {
                                 self.meta_info.mapper = val;
                                 continue;
@@ -282,7 +283,7 @@ impl Parser {
                             }
                         }
                         Directive::BANK => {
-                            println!("directive({:?})", d);
+                            debug!("directive({:?})", d);
                             if let Operand::U8(bank) = val {
                                 self.current_address.bank = bank;
                                 continue;
@@ -291,7 +292,7 @@ impl Parser {
                             }
                         }
                         Directive::DB | Directive::BYTE => {
-                            println!("directive({:?})", d);
+                            debug!("directive({:?})", d);
                             if let Operand::U8(val) = val {
                                 // let bin = Bin::new(vec![val], self.current_address.clone());
                                 let bin = Bin::new(
@@ -309,7 +310,7 @@ impl Parser {
                             }
                         }
                         Directive::DW | Directive::WORD => {
-                            println!("directive({:?})", d);
+                            debug!("directive({:?})", d);
                             match val {
                                 Operand::U16(val) => {
                                     let val = val.to_le_bytes();
@@ -342,7 +343,7 @@ impl Parser {
                                     continue;
                                 }
                                 Operand::Address(adr) => {
-                                    println!("zzzzzzzz adr = {:?}", adr);
+                                    debug!("zzzzzzzz adr = {:?}", adr);
                                     let label = Label::new(
                                         adr,
                                         RamAddress {
@@ -356,16 +357,16 @@ impl Parser {
                                     continue;
                                 }
                                 _ => {
-                                    println!("aa {:?}", val);
+                                    debug!("aa {:?}", val);
                                     panic!();
                                 }
                             }
                         }
                         Directive::INCBIN => {
-                            println!("directive({:?})", d);
+                            debug!("directive({:?})", d);
                             let val = self.get_operand(&tokens, current_pos);
                             if let Some(Operand::String(filename)) = val {
-                                println!("filename({:?})", filename);
+                                debug!("filename({:?})", filename);
                                 let filename_str: String = filename.iter().collect();
                                 
                                 // Resolve the path relative to the ASM file
@@ -396,7 +397,7 @@ impl Parser {
                 }
                 /*TokenKind::LabelDef(label) => {
                     // tood 同一行のop処理
-                    println!("labelDef({:?})", label);
+                    debug!("labelDef({:?})", label);
                     let label = &label[..label.len()-1];
                     self.symtab
                         .insert(label.iter().collect::<String>(), address);
@@ -405,14 +406,14 @@ impl Parser {
                     continue;
                 }*/
                 TokenKind::Opcode(x) => {
-                    println!("{:?}, Opcode(x) => {:?}", token_length, x);
+                    debug!("{:?}, Opcode(x) => {:?}", token_length, x);
                     let op: Opcode = (&x.iter().collect::<String>()).parse().unwrap();
                     // Implied op
                     if token_length == 1 {
                         let inst = Instruction::new(op, Addressing::Implied, None, address);
                         let inst_info = inst.get_op_info();
-                        println!("ooooppppinfo {:?}", inst.get_op_info());
-                        println!("inst {:?}", inst);
+                        debug!("ooooppppinfo {:?}", inst.get_op_info());
+                        debug!("inst {:?}", inst);
                         self.insts.push(AbstructInstruction::Instruction(inst));
                         self.current_address.address =
                             self.current_address.address + (inst_info.num_bytes as u16);
@@ -440,13 +441,13 @@ impl Parser {
                             let inst_info = inst.get_op_info();
                             self.current_address.address =
                                 self.current_address.address + (inst_info.num_bytes as u16);
-                            println!("{:?}", next);
+                            debug!("{:?}", next);
                             self.insts.push(AbstructInstruction::Instruction(inst));
                             continue;
                         }
                         _ => (),
                     }
-                    println!("next = {:?}", next);
+                    debug!("next = {:?}", next);
                     match next {
                         // Accumulator op
                         TokenKind::A => {
@@ -454,8 +455,8 @@ impl Parser {
                             let inst_info = inst.get_op_info();
                             self.current_address.address =
                                 self.current_address.address + (inst_info.num_bytes as u16);
-                            println!("{:?}", inst.get_op_info());
-                            println!("{:?}", inst.get_inst_code());
+                            debug!("{:?}", inst.get_op_info());
+                            debug!("{:?}", inst.get_inst_code());
                             self.insts.push(AbstructInstruction::Instruction(inst));
                             continue;
                         }
@@ -471,8 +472,8 @@ impl Parser {
                             let inst_info = inst.get_op_info();
                             self.current_address.address =
                                 self.current_address.address + (inst_info.num_bytes as u16);
-                            println!("{:?}", inst.get_op_info());
-                            println!("{:?}", inst.get_inst_code());
+                            debug!("{:?}", inst.get_op_info());
+                            debug!("{:?}", inst.get_inst_code());
                             self.insts.push(AbstructInstruction::Instruction(inst));
                             continue;
                         }
@@ -499,7 +500,7 @@ impl Parser {
                                     } else {
                                         current_pos += 1;
                                         let next = &tokens[current_pos].value;
-                                        println!("next = {:?}", next);
+                                        debug!("next = {:?}", next);
                                         match next {
                                             TokenKind::X => Addressing::AbsoluteX,
                                             TokenKind::Y => Addressing::AbsoluteY,
@@ -568,24 +569,24 @@ impl Parser {
                         }
                         _ => (),
                     }
-                    println!("op");
-                    //                println!("{:?}", op);
+                    debug!("op");
+                    //                debug!("{:?}", op);
                 }
                 _ => {
                     continue;
                 }
             }
         }
-        println!("xxxxxxxxxxxxxxxxxxxxxxxxxx");
-        println!("{:?}", &self.symtab);
-        // println!("xxxxxxxxxxxxxxxxxxxxxxxxxx");
+        debug!("xxxxxxxxxxxxxxxxxxxxxxxxxx");
+        debug!("{:?}", &self.symtab);
+        // debug!("xxxxxxxxxxxxxxxxxxxxxxxxxx");
         // for inst in &self.insts {
-        //     println!("{:?}", inst);
+        //     debug!("{:?}", inst);
         // }
         self.resolve_address();
-        // println!("xxxxxxxxxxxxxxxxxxxxxxxxxx");
+        // debug!("xxxxxxxxxxxxxxxxxxxxxxxxxx");
         // for inst in &self.insts {
-        //     println!("{:?}", inst);
+        //     debug!("{:?}", inst);
         // }
     }
 }

@@ -1,4 +1,5 @@
 use crate::common::{Annot, Loc};
+use log::debug;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum LexErrorKind {
     InvalidChar(char),
@@ -117,7 +118,7 @@ pub fn tokenize(line: impl Into<String>) -> Vec<Token> {
     let buf: &Vec<char> = &line.into().chars().collect();
     let mut pos = 0;
     let mut tokens: Vec<Token> = Vec::new();
-    println!("{:?}", buf);
+    debug!("{:?}", buf);
     let mut has_op = false;
     while pos < buf.len() {
         let mut cur = pos;
@@ -152,7 +153,7 @@ pub fn tokenize(line: impl Into<String>) -> Vec<Token> {
             {
                 cur += 1;
             }
-            println!("{:?}, {:?}, {:?}, ", head_ch, cur, pos);
+            debug!("{:?}, {:?}, {:?}, ", head_ch, cur, pos);
             if is_head || buf[cur - 1] == ':' {
                 tokens.push(Token::label_def(buf[pos..cur].to_vec(), Loc(pos, cur)));
             } else if cur - pos == 1

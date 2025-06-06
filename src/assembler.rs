@@ -31,6 +31,7 @@ impl Assembler {
             //            println!("end")
         }
         let mut parser = Parser::new();
+        parser.set_base_path(&asmfilepath);
         parser.parse(v);
         let bin = parser.gen_binary();
         let mut file = File::create(binfilepath).unwrap();

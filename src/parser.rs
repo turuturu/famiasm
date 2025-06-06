@@ -9,6 +9,7 @@ use crate::symbol_table::SymbolTable;
 use crate::tokenizer::{Token, TokenKind};
 use std::str::FromStr;
 use std::{fs, mem};
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Parser {
@@ -16,6 +17,7 @@ pub struct Parser {
     current_address: RamAddress,
     insts: Vec<AbstructInstruction>,
     meta_info: NesHeader,
+    base_path: Option<PathBuf>,
 }
 impl Parser {
     pub fn new() -> Parser {
@@ -27,8 +29,19 @@ impl Parser {
             },
             insts: vec![],
             meta_info: Default::default(),
+            base_path: None,
         }
     }
+
+    pub fn set_base_path(&mut self, path: &str) {
+        let path = Path::new(path);
+        if let Some(parent) = path.parent() {
+            self.base_path = Some(parent.to_path_buf());
+        } else {
+            self.base_path = Some(PathBuf::from("."));
+        }
+    }
+
     fn get_operand(&self, tokens: &Vec<Annot<TokenKind>>, offset: usize) -> Option<Operand> {
         let length = tokens.len();
         if length <= offset {
@@ -354,7 +367,16 @@ impl Parser {
                             if let Some(Operand::String(filename)) = val {
                                 println!("filename({:?})", filename);
                                 let filename_str: String = filename.iter().collect();
-                                let data: Vec<u8> = fs::read(filename_str).unwrap();
+                                
+                                // Resolve the path relative to the ASM file
+                                let file_path = if let Some(ref base) = self.base_path {
+                                    base.join(&filename_str)
+                                } else {
+                                    PathBuf::from(&filename_str)
+                                };
+                                
+                                let data: Vec<u8> = fs::read(&file_path)
+                                    .unwrap_or_else(|e| panic!("Failed to read file {:?}: {}", file_path, e));
                                 let file_size = data.len() as u16;
                                 let bin = Bin::new(
                                     data,

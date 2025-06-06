@@ -1,6 +1,4 @@
 use std::env;
-use std::fs::File;
-use std::io::prelude::*;
 mod assembler;
 use assembler::Assembler;
 mod common;
@@ -18,7 +16,7 @@ fn main() {
         return;
     }
     println!("{:?}", args);
-    let filename = &args[1];
+    let _filename = &args[1];
     //let mut f = File::open(filename).expect("xxxx");
     //let mut contents = String::new();
     //f.read_to_string(&mut contents).expect("xx");

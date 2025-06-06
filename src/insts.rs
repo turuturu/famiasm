@@ -230,8 +230,8 @@ impl Instruction {
         let address = match self.operand.as_ref().unwrap() {
             Operand::Address(address) => {
                 match address {
-                    AbstructAddress::RamAddress(ramAddress) => ramAddress.address,
-                    AbstructAddress::Label(label) => 0, // todo label解決
+                    AbstructAddress::RamAddress(ram_address) => ram_address.address,
+                    AbstructAddress::Label(_label) => 0, // todo label解決
                 }
             }
             Operand::Im(im) => im.clone(),

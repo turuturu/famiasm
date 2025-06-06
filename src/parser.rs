@@ -1,4 +1,4 @@
-use crate::common::{Annot, Loc};
+use crate::common::Annot;
 use crate::directive::Directive;
 use crate::insts::{
     AbstructAddress, AbstructInstruction, Addressing, Bin, Instruction, Label, Opcode, Operand,
@@ -7,7 +7,6 @@ use crate::insts::{
 use crate::nes_header::NesHeader;
 use crate::symbol_table::SymbolTable;
 use crate::tokenizer::{Token, TokenKind};
-use std::convert::TryInto;
 use std::str::FromStr;
 use std::{fs, mem};
 
@@ -80,7 +79,7 @@ impl Parser {
         return None;
     }
     pub fn resolve_address(&mut self) {
-        for mut inst in &mut self.insts {
+        for inst in &mut self.insts {
             if let AbstructInstruction::Instruction(inst) = inst {
                 if let Some(Operand::Address(AbstructAddress::Label(label))) = &inst.operand {
                     if inst.addressing == Addressing::Relative {
@@ -371,9 +370,6 @@ impl Parser {
                             }
                             continue;
                         }
-                        _ => {
-                            println!("unsupported directive {:?}", d);
-                        }
                     }
                 }
                 /*TokenKind::LabelDef(label) => {
@@ -442,7 +438,7 @@ impl Parser {
                             continue;
                         }
                         // Immediate op
-                        TokenKind::Im(val) => {
+                        TokenKind::Im(_val) => {
                             let operand = self.get_operand(&tokens, current_pos);
                             let inst = Instruction::new(
                                 op,

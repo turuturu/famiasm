@@ -1,5 +1,4 @@
 use crate::common::{Annot, Loc};
-use std::convert::TryFrom;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum LexErrorKind {
     InvalidChar(char),
@@ -47,7 +46,7 @@ impl Token {
     fn label(label: Vec<char>, loc: Loc) -> Self {
         Self::new(TokenKind::Label(label), loc)
     }
-    fn labelDef(label: Vec<char>, loc: Loc) -> Self {
+    fn label_def(label: Vec<char>, loc: Loc) -> Self {
         Self::new(TokenKind::LabelDef(label), loc)
     }
     fn opcode(opcode: Vec<char>, loc: Loc) -> Self {
@@ -155,7 +154,7 @@ pub fn tokenize(line: impl Into<String>) -> Vec<Token> {
             }
             println!("{:?}, {:?}, {:?}, ", head_ch, cur, pos);
             if is_head || buf[cur - 1] == ':' {
-                tokens.push(Token::labelDef(buf[pos..cur].to_vec(), Loc(pos, cur)));
+                tokens.push(Token::label_def(buf[pos..cur].to_vec(), Loc(pos, cur)));
             } else if cur - pos == 1
                 && (buf[cur - 1] == 'X'
                     || buf[cur - 1] == 'x'
@@ -260,8 +259,6 @@ pub fn tokenize(line: impl Into<String>) -> Vec<Token> {
         });
         pos = cur + 1;
         continue;
-        println!("{:?}", buf);
-        panic!();
     }
     tokens
 }

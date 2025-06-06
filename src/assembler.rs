@@ -1,9 +1,8 @@
-use crate::insts::{Addressing, Instruction, Opcode};
 use crate::parser::Parser;
 use crate::tokenizer;
 use std::fs;
 use std::fs::File;
-use std::io::{self, Write};
+use std::io::Write;
 use std::io::{BufRead, BufReader};
 
 pub struct Assembler {}

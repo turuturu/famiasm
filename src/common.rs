@@ -1,6 +1,7 @@
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Loc(pub usize, pub usize);
 impl Loc {
+    #[allow(dead_code)]
     pub fn merge(&self, other: &Loc) {
         use std::cmp::{max, min};
         Loc(min(self.0, other.0), max(self.1, other.1));

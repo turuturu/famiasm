@@ -17,6 +17,7 @@ impl SymbolTable {
     pub fn get(&self, key: &String) -> Option<&RamAddress> {
         self.table.get(key)
     }
+    #[allow(dead_code)]
     pub fn contains(&self, key: &String) -> bool {
         self.table.contains_key(key)
     }

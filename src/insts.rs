@@ -84,6 +84,7 @@ pub enum Opcode {
     TXA,
     TXS,
     TYA,
+    #[allow(dead_code)]
     DIRECTIVE(Directive),
 }
 use std::str::FromStr;

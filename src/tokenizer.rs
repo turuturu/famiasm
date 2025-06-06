@@ -2,15 +2,20 @@ use crate::common::{Annot, Loc};
 use log::debug;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum LexErrorKind {
+    #[allow(dead_code)]
     InvalidChar(char),
+    #[allow(dead_code)]
     Eof,
 }
+#[allow(dead_code)]
 type LexError = Annot<LexErrorKind>;
 
 impl LexError {
+    #[allow(dead_code)]
     fn invalid_char(c: char, loc: Loc) -> Self {
         LexError::new(LexErrorKind::InvalidChar(c), loc)
     }
+    #[allow(dead_code)]
     fn eof(loc: Loc) -> Self {
         LexError::new(LexErrorKind::Eof, loc)
     }
@@ -32,9 +37,11 @@ pub enum TokenKind {
     X,
     Y,
     A,
+    #[allow(dead_code)]
     Comma,
     LParen,
     RParen,
+    #[allow(dead_code)]
     Spaces,
     Arrow,
 }
@@ -53,9 +60,11 @@ impl Token {
     fn opcode(opcode: Vec<char>, loc: Loc) -> Self {
         Self::new(TokenKind::Opcode(opcode), loc)
     }
+    #[allow(dead_code)]
     fn comment(comment: Vec<char>, loc: Loc) -> Self {
         Self::new(TokenKind::Comment(comment), loc)
     }
+    #[allow(dead_code)]
     fn comma(loc: Loc) -> Self {
         Self::new(TokenKind::Comma, loc)
     }
@@ -92,6 +101,7 @@ impl Token {
     fn rparen(loc: Loc) -> Self {
         Self::new(TokenKind::RParen, loc)
     }
+    #[allow(dead_code)]
     fn spaces(loc: Loc) -> Self {
         Self::new(TokenKind::Spaces, loc)
     }

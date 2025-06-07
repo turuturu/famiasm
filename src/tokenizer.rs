@@ -159,13 +159,18 @@ pub fn tokenize(line: impl Into<String>) -> Vec<Token> {
         if head_ch.is_ascii_alphabetic() || buf[cur] == '.' {
             let is_head = cur == 0;
             while cur < buf.len()
-                && (buf[cur].is_ascii_alphabetic() || buf[cur] == ':' || buf[cur] == '.')
+                && (buf[cur].is_ascii_alphabetic() || buf[cur].is_ascii_digit() || buf[cur] == ':' || buf[cur] == '.' || buf[cur] == '_')
             {
                 cur += 1;
             }
             debug!("{:?}, {:?}, {:?}, ", head_ch, cur, pos);
-            if is_head || buf[cur - 1] == ':' {
+            if buf[cur - 1] == ':' {
+                // Label definition (ends with colon)
                 tokens.push(Token::label_def(buf[pos..cur].to_vec(), Loc(pos, cur)));
+            } else if buf[pos] == '.' {
+                // Directive (starts with dot)
+                has_op = true;
+                tokens.push(Token::directive(buf[pos..cur].to_vec(), Loc(pos, cur)));
             } else if cur - pos == 1
                 && (buf[cur - 1] == 'X'
                     || buf[cur - 1] == 'x'
@@ -174,18 +179,21 @@ pub fn tokenize(line: impl Into<String>) -> Vec<Token> {
                     || buf[cur - 1] == 'a'
                     || buf[cur - 1] == 'A')
             {
+                // Single character registers
                 tokens.push(match buf[cur - 1] {
                     'X' | 'x' => Token::x(Loc(pos, cur)),
                     'Y' | 'y' => Token::y(Loc(pos, cur)),
                     'A' | 'a' => Token::a(Loc(pos, cur)),
                     _ => panic!(""),
                 });
-            } else if is_head || buf[cur - 1] == ':' || has_op {
+            } else if is_head && !has_op {
+                // Label definition at start of line (no colon)
+                tokens.push(Token::label_def(buf[pos..cur].to_vec(), Loc(pos, cur)));
+            } else if has_op {
+                // After opcode/directive, treat as label/operand
                 tokens.push(Token::label(buf[pos..cur].to_vec(), Loc(pos, cur)));
-            } else if buf[pos] == '.' {
-                has_op = true;
-                tokens.push(Token::directive(buf[pos..cur].to_vec(), Loc(pos, cur)));
             } else {
+                // Default to opcode
                 has_op = true;
                 tokens.push(Token::opcode(buf[pos..cur].to_vec(), Loc(pos, cur)));
             }
@@ -268,7 +276,7 @@ pub fn tokenize(line: impl Into<String>) -> Vec<Token> {
             }
             //Token::adr(u8::from_str_radix(&str,radix).unwrap(), Loc(pos, cur))
         });
-        pos = cur + 1;
+        pos = cur;
         continue;
     }
     tokens

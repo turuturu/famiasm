@@ -92,6 +92,7 @@ impl Parser {
         }
         return None;
     }
+
     pub fn resolve_address(&mut self) {
         for inst in &mut self.insts {
             if let AbstructInstruction::Instruction(inst) = inst {
@@ -293,21 +294,41 @@ impl Parser {
                         }
                         Directive::DB | Directive::BYTE => {
                             debug!("directive({:?})", d);
-                            if let Operand::U8(val) = val {
-                                // let bin = Bin::new(vec![val], self.current_address.clone());
-                                let bin = Bin::new(
-                                    vec![val],
-                                    RamAddress {
-                                        bank: self.current_address.bank,
-                                        address: self.current_address.address,
-                                    },
-                                );
-                                self.insts.push(AbstructInstruction::Bin(bin));
-                                self.current_address.address += 1;
-                                continue;
-                            } else {
-                                panic!();
+                            
+                            // Collect all remaining U8/Adr8 tokens from this line
+                            let mut bytes = Vec::new();
+                            let mut pos = current_pos;
+                            while pos < tokens.len() {
+                                match &tokens[pos].value {
+                                    TokenKind::U8(val) => {
+                                        bytes.push(*val);
+                                        pos += 1;
+                                    }
+                                    TokenKind::Adr8(val) => {
+                                        bytes.push(*val);
+                                        pos += 1;
+                                    }
+                                    _ => {
+                                        break;
+                                    }
+                                }
                             }
+                            
+                            if bytes.is_empty() {
+                                panic!("DB/BYTE directive requires U8 values");
+                            }
+                            
+                            let bytes_len = bytes.len();
+                            let bin = Bin::new(
+                                bytes,
+                                RamAddress {
+                                    bank: self.current_address.bank,
+                                    address: self.current_address.address,
+                                },
+                            );
+                            self.insts.push(AbstructInstruction::Bin(bin));
+                            self.current_address.address += bytes_len as u16;
+                            continue;
                         }
                         Directive::DW | Directive::WORD => {
                             debug!("directive({:?})", d);
@@ -407,7 +428,8 @@ impl Parser {
                 }*/
                 TokenKind::Opcode(x) => {
                     debug!("{:?}, Opcode(x) => {:?}", token_length, x);
-                    let op: Opcode = (&x.iter().collect::<String>()).parse().unwrap();
+                    let opcode_str = x.iter().collect::<String>();
+                    let op: Opcode = (&opcode_str).parse().unwrap();
                     // Implied op
                     if token_length == 1 {
                         let inst = Instruction::new(op, Addressing::Implied, None, address);

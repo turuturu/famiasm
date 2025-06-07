@@ -1110,7 +1110,7 @@ impl Instruction {
                     opcode: 0x96,
                 },
                 Addressing::Absolute => OpInfo {
-                    num_bytes: 4,
+                    num_bytes: 3,
                     num_cycles: 4,
                     opcode: 0x8e,
                 },

@@ -13,7 +13,7 @@ mod tokenizer;
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        println!("引数エラー");
+        println!("Usage: famiasm <filename.asm>");
         return;
     }
     debug!("{:?}", args);

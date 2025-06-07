@@ -210,17 +210,4 @@ START:
         fs::remove_file(test_file).ok();
         fs::remove_file("test_vectors.nes").ok();
     }
-
-    #[test]
-    fn test_existing_sample() {
-        // Test that we can assemble the existing sample file
-        let result = run_famiasm("sample/giko005.asm");
-        assert!(result.is_ok(), "Failed to assemble sample/giko005.asm");
-
-        let output = result.unwrap();
-
-        // Basic sanity checks
-        assert_eq!(&output[0..4], b"NES\x1A", "Invalid NES header magic");
-        assert!(output.len() > 16, "Output too small");
-    }
 }

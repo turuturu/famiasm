@@ -1,0 +1,9 @@
+{
+  "name": "Famiasm Development",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "vscode",
+  "runArgs": ["--init"]
+}
